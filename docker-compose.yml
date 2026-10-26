@@ -1,0 +1,32 @@
+# One command to run everything:   docker compose up --build
+# Without rebuilding (after `docker load`):   docker compose up --no-build
+services:
+  # Builds the lab target image the orchestrator launches for every session.
+  # It exits immediately (`true`); it exists only so `compose up --build` builds the image.
+  target-image:
+    build: ./target
+    image: flag-lab-target:latest
+    command: ["true"]
+    restart: "no"
+
+  app:
+    build: .
+    image: dynamic-flag-system:latest
+    depends_on:
+      target-image:
+        condition: service_completed_successfully
+    env_file: .env            # create with: npm run init-env  (or copy .env.example)
+    environment:
+      PORT: "3000"
+      DB_PATH: /app/data/flags.db
+      DOCKER_DRIVER: docker
+      TARGET_IMAGE: flag-lab-target:latest
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - flag-data:/app/data                          # SQLite DB survives restarts
+      - /var/run/docker.sock:/var/run/docker.sock    # lets the orchestrator start/stop target containers
+    restart: unless-stopped
+
+volumes:
+  flag-data:

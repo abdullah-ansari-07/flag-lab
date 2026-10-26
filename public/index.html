@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flag Lab - per-lab flags</title>
+<style>
+  :root {
+    --paper: #e8edf2; --panel: #f8fafc; --ink: #16233b; --muted: #4d5e76; --line: #c3cedb;
+    --accent: #0f6b7d; --accent-ink: #ffffff; --ok: #1f6b40; --bad: #9c2b1a; --info: #5b4a00;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--sans); }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
+  p { margin: 0; max-width: 62ch; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  header { background: var(--ink); color: #fff; }
+  .bar { max-width: 960px; margin: 0 auto; padding: .8rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .brand { font: 600 1.35rem var(--serif); letter-spacing: .01em; }
+  .who { display: flex; align-items: center; gap: .75rem; font-size: .95rem; }
+  main { max-width: 960px; margin: 0 auto; padding: 1.75rem 1.25rem 4rem; }
+
+  .btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 4px; padding: .5rem 1rem; cursor: pointer; font-weight: 600; }
+  .btn:hover { filter: brightness(1.1); }
+  .btn[disabled] { opacity: .55; cursor: not-allowed; }
+  .btn.quiet { background: transparent; color: inherit; border: 1px solid currentColor; font-weight: 500; }
+  .btn.danger { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
+  header .btn.quiet { color: #fff; }
+
+  /* sign-in */
+  .auth { display: grid; grid-template-columns: 1.1fr .9fr; gap: 3rem; align-items: start; margin-top: 1rem; }
+  .auth h1 { font-size: 2.1rem; margin-bottom: 1rem; }
+  .auth .points { display: grid; gap: .9rem; margin-top: 1.25rem; padding-left: 1rem; border-left: 3px solid var(--accent); }
+  .form { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 1.25rem; }
+  .tabs { display: flex; gap: 1.25rem; border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
+  .tab { background: none; border: 0; padding: .4rem 0; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; font-weight: 600; }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  label { display: block; font-weight: 600; margin: .75rem 0 .25rem; }
+  input[type=text], input[type=password], select { width: 100%; padding: .5rem .6rem; border: 1px solid #8a9ab0; border-radius: 4px; background: #fff; }
+  .hint { color: var(--muted); font-size: .9rem; }
+  .form .btn { margin-top: 1rem; width: 100%; }
+
+  /* dashboard */
+  .toolbar { display: flex; align-items: end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .toolbar h2 { font-size: 1.6rem; }
+  .note { border: 1px solid var(--line); border-left: 4px solid var(--info); background: var(--panel); padding: .7rem 1rem; margin-bottom: 1.25rem; font-size: .95rem; }
+  .empty { border: 1px dashed #8a9ab0; padding: 1.5rem; background: var(--panel); }
+
+  .lab { --hue: 200; background: var(--panel); border: 1px solid var(--line); border-left: 10px solid hsl(var(--hue) 55% 38%); border-radius: 4px; padding: 1rem 1.25rem; margin-bottom: 1.1rem; }
+  .lab.over { opacity: .8; }
+  .lab-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .lab-head h3 { font-size: 1.3rem; }
+  .print { font: .95rem var(--mono); background: hsl(var(--hue) 45% 90%); padding: .1rem .45rem; border-radius: 3px; margin-left: .5rem; }
+  .status { font-weight: 600; }
+  .status.running { color: var(--ok); } .status.over { color: var(--muted); }
+  .cmd { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .6rem; }
+  code, .flag { font-family: var(--mono); font-size: .88rem; word-break: break-all; }
+  code { background: #e3e9f0; padding: .2rem .4rem; border-radius: 3px; }
+  .progress { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: .9rem 0 .2rem; font-weight: 600; }
+  .done { color: var(--ok); } .todo { color: var(--muted); font-weight: 500; }
+  .reveal { margin-top: .8rem; display: grid; gap: .4rem; }
+  .flagrow { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; background: hsl(var(--hue) 50% 92%); border: 1px solid hsl(var(--hue) 35% 70%); padding: .4rem .6rem; border-radius: 3px; }
+  .flagrow b { min-width: 3.5rem; font-family: var(--sans); }
+  .submit { display: grid; grid-template-columns: 7rem 1fr auto; gap: .6rem; align-items: end; margin-top: .9rem; }
+  .submit label { margin-top: 0; }
+  .msg { min-height: 1.5rem; margin-top: .6rem; font-weight: 600; }
+  .msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); } .msg.info { color: var(--info); }
+  .actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .6rem; }
+  .table-wrap { overflow-x: auto; margin-top: .8rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: .3rem .6rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
+
+  @media (max-width: 720px) {
+    .auth { grid-template-columns: 1fr; gap: 1.5rem; }
+    .submit { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header><div class="bar" id="bar"></div></header>
+<main id="main" aria-live="polite"></main>
+
+<script>
+'use strict';
+
+// ---- tiny DOM helper: builds elements with textContent only, so server data can never inject HTML ----
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'style') el.setAttribute('style', v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+const state = { user: null, meta: { demoMode: false }, labs: [], authMode: 'signin', authError: '', busy: false, startError: '' };
+const ui = {}; // per-lab UI state that must survive refreshes: typed text, messages, revealed flags, attempts
+
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  let json = null;
+  try { json = await res.json(); } catch { /* empty body */ }
+  if (res.status === 401 && !url.startsWith('/api/auth/')) { state.user = null; render(); }
+  return { status: res.status, body: json || {} };
+}
+
+const hueOf = (id) => parseInt(id.slice(5, 9), 16) % 360;
+const printOf = (id) => id.slice(5, 11);
+const copy = (text, btn) => navigator.clipboard.writeText(text).then(() => { const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = t; }, 1200); });
+
+function clock(ms) {
+  if (ms <= 0) return '0:00';
+  const s = Math.floor(ms / 1000), hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+  return (hh ? hh + ':' + String(mm).padStart(2, '0') : String(mm)) + ':' + String(ss).padStart(2, '0');
+}
+
+const RESULT_TEXT = {
+  success: (t, b) => ['ok', `Correct. The ${t} flag is accepted for this lab.${b.allFlagsSolved ? ' Both flags are solved.' : ''}`],
+  incorrect: () => ['bad', 'Not accepted. This value is not a flag for this lab. A flag copied from another lab never matches.'],
+  already_solved: (t) => ['info', `You already solved the ${t} flag for this lab.`],
+  expired: () => ['bad', 'This lab has ended, so its flags no longer work. Start a new lab to get new flags.'],
+  invalid_session: () => ['bad', 'This lab was not found.'],
+  invalid_flag_type: () => ['bad', 'Choose either the user flag or the root flag.'],
+  invalid_request: () => ['bad', 'Enter the flag value you found (up to 256 characters).'],
+};
+
+// ---------------------------------------------------------------- actions
+async function refreshLabs() {
+  const r = await api('GET', '/api/sessions');
+  if (r.status === 200) { state.labs = r.body.sessions; render(); }
+}
+
+async function submitAuth(ev) {
+  ev.preventDefault();
+  const f = new FormData(ev.target);
+  const path = state.authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+  state.busy = true; state.authError = ''; render();
+  const r = await api('POST', path, { username: f.get('username'), password: f.get('password') });
+  state.busy = false;
+  if (r.status === 200 || r.status === 201) { state.user = r.body.user; state.authError = ''; await refreshLabs(); }
+  else { state.authError = r.body.message || 'Something went wrong. Try again.'; }
+  render();
+}
+
+async function signOut() {
+  await api('POST', '/api/auth/logout');
+  state.user = null; state.labs = []; for (const k of Object.keys(ui)) delete ui[k];
+  render();
+}
+
+async function startLab() {
+  state.busy = true; state.startError = ''; render();
+  const r = await api('POST', '/api/sessions');
+  state.busy = false;
+  if (r.status !== 201) state.startError = r.status === 429 ? 'The platform is at capacity. End a lab or try again shortly.' : (r.body.message || 'The lab could not be started.');
+  await refreshLabs();
+}
+
+async function endLab(id) {
+  if (!window.confirm('End this lab? Its flags stop working and the container is removed.')) return;
+  await api('DELETE', `/api/sessions/${id}`);
+  await refreshLabs();
+}
+
+async function submitFlag(id, ev) {
+  ev.preventDefault();
+  const s = (ui[id] ||= {});
+  const r = await api('POST', `/api/sessions/${id}/flag`, { flagType: s.type || 'user', value: s.value || '' });
+  const pick = RESULT_TEXT[r.body.result];
+  s.msg = pick ? pick(s.type || 'user', r.body) : ['bad', r.body.message || 'The submission could not be checked.'];
+  if (r.body.result === 'success') s.value = '';
+  if (s.attemptsOpen) await loadAttempts(id, true);
+  await refreshLabs();
+}
+
+async function reveal(id) {
+  const s = (ui[id] ||= {});
+  const r = await api('GET', `/api/sessions/${id}/reveal`);
+  s.revealed = r.status === 200 ? r.body : null;
+  if (r.status !== 200) s.msg = ['bad', r.body.message || 'Flags can only be revealed while the lab is running.'];
+  render();
+}
+
+async function loadAttempts(id, keepOpen) {
+  const s = (ui[id] ||= {});
+  if (s.attemptsOpen && !keepOpen) { s.attemptsOpen = false; return render(); }
+  const r = await api('GET', `/api/sessions/${id}/attempts`);
+  s.attempts = r.body.attempts || []; s.attemptsOpen = true; render();
+}
+
+// ---------------------------------------------------------------- views
+function barView() {
+  const bar = document.getElementById('bar');
+  bar.replaceChildren(
+    h('span', { class: 'brand' }, 'Flag Lab'),
+    state.user ? h('div', { class: 'who' }, h('span', null, `Signed in as ${state.user.username}`), h('button', { class: 'btn quiet', onclick: signOut }, 'Sign out')) : ''
+  );
+}
+
+function authView() {
+  const reg = state.authMode === 'register';
+  const tab = (mode, label) => h('button', { type: 'button', class: 'tab', role: 'tab', 'aria-selected': String(state.authMode === mode), onclick: () => { state.authMode = mode; state.authError = ''; render(); } }, label);
+  return h('div', { class: 'auth' },
+    h('div', null,
+      h('h1', null, 'Every lab gets its own flags.'),
+      h('p', null, 'Start a lab and the server creates a new user flag and root flag for that lab alone, then places them inside its container.'),
+      h('div', { class: 'points' },
+        h('p', null, 'The server keeps only a keyed hash of each flag, never the flag itself.'),
+        h('p', null, 'A flag is checked against the lab you submit it to. A flag from someone else\'s lab is refused.'),
+        h('p', null, 'When a lab ends or times out, its flags stop working.'))),
+    h('form', { class: 'form', onsubmit: submitAuth },
+      h('div', { class: 'tabs', role: 'tablist' }, tab('signin', 'Sign in'), tab('register', 'Create account')),
+      h('label', { for: 'u' }, 'Username'),
+      h('input', { id: 'u', name: 'username', type: 'text', autocomplete: 'username', required: true, minlength: 3, maxlength: 32, pattern: '[A-Za-z0-9_]+' }),
+      reg && h('p', { class: 'hint' }, '3 to 32 characters: letters, numbers or underscore.'),
+      h('label', { for: 'p' }, 'Password'),
+      h('input', { id: 'p', name: 'password', type: 'password', autocomplete: reg ? 'new-password' : 'current-password', required: true, minlength: 8, maxlength: 128 }),
+      reg && h('p', { class: 'hint' }, 'At least 8 characters.'),
+      h('p', { class: 'msg bad', role: 'alert' }, state.authError),
+      h('button', { class: 'btn', type: 'submit', disabled: state.busy }, reg ? 'Create account' : 'Sign in')));
+}
+
+function flagRow(label, value) {
+  const btn = h('button', { class: 'btn quiet', type: 'button' }, 'Copy');
+  btn.addEventListener('click', () => copy(value, btn));
+  return h('div', { class: 'flagrow' }, h('b', null, label), h('span', { class: 'flag' }, value), btn);
+}
+
+function labView(lab) {
+  const s = (ui[lab.sessionId] ||= { type: 'user', value: '' });
+  const running = lab.status === 'running';
+  const container = `flaglab-target-${lab.sessionId}`;
+  const command = `docker exec ${container} cat /root/user.txt /root/root.txt`;
+  const cmdBtn = h('button', { class: 'btn quiet', type: 'button' }, 'Copy command');
+  cmdBtn.addEventListener('click', () => copy(command, cmdBtn));
+  const solved = (t) => (lab.flags.find((f) => f.flagType === t) || {}).solved;
+  const progress = (t) => h('span', { class: solved(t) ? 'done' : 'todo' }, `${t === 'user' ? 'User' : 'Root'} flag: ${solved(t) ? 'solved' : 'not yet'}`);
+  const statusText = running ? 'Running' : lab.status === 'terminated' ? 'Ended' : lab.status === 'failed' ? 'Failed to start' : 'Expired';
+
+  const form = h('form', { class: 'submit', onsubmit: (ev) => submitFlag(lab.sessionId, ev) },
+    h('div', null, h('label', { for: `t-${lab.sessionId}` }, 'Flag'),
+      h('select', { id: `t-${lab.sessionId}`, onchange: (e) => { s.type = e.target.value; } },
+        h('option', { value: 'user', selected: s.type === 'user' }, 'User'), h('option', { value: 'root', selected: s.type === 'root' }, 'Root'))),
+    h('div', null, h('label', { for: `v-${lab.sessionId}` }, 'Value you found'),
+      h('input', { id: `v-${lab.sessionId}`, type: 'text', autocomplete: 'off', spellcheck: 'false', maxlength: 256, placeholder: 'LAB_ROOT{...}', value: s.value || '', oninput: (e) => { s.value = e.target.value; } })),
+    h('button', { class: 'btn', type: 'submit' }, 'Submit flag'));
+  if (!running) for (const el of form.querySelectorAll('input,select,button')) el.disabled = true;
+
+  const attempts = s.attemptsOpen && h('div', { class: 'table-wrap' },
+    s.attempts.length ? h('table', null, h('thead', null, h('tr', null, h('th', null, 'Time'), h('th', null, 'Flag'), h('th', null, 'Result'))),
+      h('tbody', null, s.attempts.map((a) => h('tr', null, h('td', null, new Date(a.timestamp).toLocaleTimeString()), h('td', null, a.flagType || 'none'), h('td', null, a.result)))))
+      : h('p', { class: 'hint' }, 'No submissions yet for this lab.'));
+
+  return h('section', { class: 'lab' + (running ? '' : ' over'), style: `--hue:${hueOf(lab.sessionId)}`, 'aria-label': `Lab ${printOf(lab.sessionId)}` },
+    h('div', { class: 'lab-head' },
+      h('h3', null, 'Lab', h('span', { class: 'print', title: 'Fingerprint of this lab\'s session ID' }, printOf(lab.sessionId))),
+      h('div', null, h('span', { class: 'status ' + (running ? 'running' : 'over') }, statusText), running && h('span', { class: 'hint' }, ' - ends in '), running && h('span', { class: 'hint tick', 'data-expires': lab.expiresAt }, clock(new Date(lab.expiresAt) - Date.now())))),
+    running && h('div', { class: 'cmd' }, h('span', { class: 'hint' }, 'Read the flags inside this lab\'s container:'), h('code', null, command), cmdBtn),
+    h('div', { class: 'progress' }, progress('user'), progress('root')),
+    running && state.meta.demoMode && h('div', null,
+      h('div', { class: 'actions' }, h('button', { class: 'btn quiet', type: 'button', onclick: () => reveal(lab.sessionId) }, s.revealed ? 'Refresh flags' : 'Reveal flags (demo)')),
+      s.revealed && h('div', { class: 'reveal' }, flagRow('User', s.revealed.user), flagRow('Root', s.revealed.root))),
+    form,
+    h('p', { class: 'msg ' + (s.msg ? s.msg[0] : ''), role: 'status' }, s.msg ? s.msg[1] : ''),
+    h('div', { class: 'actions' },
+      h('button', { class: 'btn quiet', type: 'button', onclick: () => loadAttempts(lab.sessionId) }, s.attemptsOpen ? 'Hide attempts' : 'Show attempts'),
+      running && h('button', { class: 'btn danger', type: 'button', onclick: () => endLab(lab.sessionId) }, 'End lab')),
+    attempts);
+}
+
+function dashboardView() {
+  return h('div', null,
+    state.meta.demoMode && h('div', { class: 'note' }, h('b', null, 'Demo mode is on. '), 'Each running lab can reveal its flags so you can compare labs. To compare two users, sign in as a second user in a private window. Set DEMO_MODE=false for real learners.'),
+    h('div', { class: 'toolbar' },
+      h('div', null, h('h2', null, 'Your labs'), h('p', { class: 'hint' }, `Each lab lasts ${state.meta.sessionTtlMinutes || 60} minutes.`)),
+      h('button', { class: 'btn', onclick: startLab, disabled: state.busy }, state.busy ? 'Starting...' : 'Start lab')),
+    state.startError && h('p', { class: 'msg bad', role: 'alert' }, state.startError),
+    state.labs.length ? state.labs.map(labView) : h('div', { class: 'empty' }, h('p', null, 'You have no labs yet. Start a lab to get your own user flag and root flag.')));
+}
+
+function render() {
+  barView();
+  const main = document.getElementById('main');
+  // Keep keyboard focus and caret when the view is rebuilt while someone is typing.
+  const active = document.activeElement;
+  const keep = active && active.id ? { id: active.id, start: active.selectionStart, end: active.selectionEnd } : null;
+  main.replaceChildren(state.user ? dashboardView() : authView());
+  if (keep) {
+    const el = document.getElementById(keep.id);
+    if (el) { el.focus(); try { el.setSelectionRange(keep.start, keep.end); } catch { /* not a text input */ } }
+  }
+}
+
+// ---------------------------------------------------------------- boot
+setInterval(() => {
+  let ended = false;
+  for (const el of document.querySelectorAll('.tick')) {
+    const left = new Date(el.dataset.expires) - Date.now();
+    el.textContent = clock(left);
+    if (left <= 0) ended = true;
+  }
+  if (ended) refreshLabs();
+}, 1000);
+setInterval(() => { if (state.user && !document.hidden) refreshLabs(); }, 15000);
+
+(async function boot() {
+  const meta = await api('GET', '/api/meta'); if (meta.status === 200) state.meta = meta.body;
+  const me = await api('GET', '/api/auth/me');
+  if (me.status === 200) { state.user = me.body.user; await refreshLabs(); }
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "dynamic-flag-system",
+  "version": "1.0.0",
+  "description": "Dynamic per-session flag generation, injection and validation for a cybersecurity lab platform (Problem Statement #3)",
+  "main": "src/server.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"tests/unit/*.test.js\"",
+    "test:integration": "node --test \"tests/integration/*.test.js\"",
+    "demo": "node scripts/demo.js",
+    "demo:mock": "node scripts/demo.js --mock",
+    "init-env": "node scripts/init-env.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3"
+  }
+}
